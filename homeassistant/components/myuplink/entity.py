@@ -45,8 +45,8 @@ class MyUplinkSystemEntity(CoordinatorEntity[MyUplinkDataCoordinator]):
         super().__init__(coordinator=coordinator)
 
         # Internal properties
-        self.system = system.raw["id"]
+        self.system = system.id
 
         # Basic values
-        self._attr_unique_id = f"{system.raw['id']}-{unique_id_suffix}"
-        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, system.raw["id"])})
+        self._attr_unique_id = f"{system.id}-{unique_id_suffix}"
+        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, system.id)})
