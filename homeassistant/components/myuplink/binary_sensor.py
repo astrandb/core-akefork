@@ -1,8 +1,12 @@
 """Binary sensors for myUplink."""
 
-from myuplink import DevicePoint
+from dataclasses import dataclass
+from typing import cast
+
+from myuplink import DevicePoint, System
 
 from homeassistant.components.binary_sensor import (
+    BinarySensorDeviceClass,
     BinarySensorEntity,
     BinarySensorEntityDescription,
 )
@@ -13,7 +17,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import MyUplinkDataCoordinator
 from .const import DOMAIN
-from .entity import MyUplinkEntity
+from .entity import MyUplinkEntity, MyUplinkSystemEntity
 from .helpers import find_matching_platform
 
 CATEGORY_BASED_DESCRIPTIONS: dict[str, dict[str, BinarySensorEntityDescription]] = {
@@ -23,6 +27,23 @@ CATEGORY_BASED_DESCRIPTIONS: dict[str, dict[str, BinarySensorEntityDescription]]
             icon="mdi:electric-switch",
         ),
     },
+}
+
+
+@dataclass(frozen=True)
+class MyUplinkSystemBinarySensorDescription(BinarySensorEntityDescription):
+    """Class describing Miele binary sensor entities."""
+
+    attribute: str | None = None
+
+
+SYSTEM_DESCRIPTIONS: dict[str, MyUplinkSystemBinarySensorDescription] = {
+    "alarm": MyUplinkSystemBinarySensorDescription(
+        key="alarm",
+        name="Alarm",
+        device_class=BinarySensorDeviceClass.PROBLEM,
+        attribute="hasAlarm",
+    ),
 }
 
 
@@ -65,6 +86,16 @@ async def async_setup_entry(
                         unique_id_suffix=point_id,
                     )
                 )
+    for system in coordinator.data.systems:
+        for description in SYSTEM_DESCRIPTIONS.values():
+            entities.append(
+                MyUplinkSystemBinarySensor(
+                    coordinator=coordinator,
+                    system=system,
+                    entity_description=description,
+                    unique_id_suffix=description.key,
+                )
+            )
     async_add_entities(entities)
 
 
@@ -97,4 +128,31 @@ class MyUplinkDevicePointBinarySensor(MyUplinkEntity, BinarySensorEntity):
     def is_on(self) -> bool:
         """Binary sensor state value."""
         device_point = self.coordinator.data.points[self.device_id][self.point_id]
-        return int(device_point.value) != 0
+        return cast(int, device_point.value) != 0
+
+
+class MyUplinkSystemBinarySensor(MyUplinkSystemEntity, BinarySensorEntity):
+    """Representation of a myUplink System binary sensor."""
+
+    def __init__(
+        self,
+        coordinator: MyUplinkDataCoordinator,
+        system: System,
+        entity_description: MyUplinkSystemBinarySensorDescription,
+        unique_id_suffix: str,
+    ) -> None:
+        """Initialize the binary_sensor."""
+        super().__init__(
+            coordinator=coordinator,
+            system=system,
+            unique_id_suffix=unique_id_suffix,
+        )
+
+        self.entity_description: MyUplinkSystemBinarySensorDescription = (
+            entity_description
+        )
+
+    @property
+    def is_on(self) -> bool:
+        """Binary sensor state value."""
+        return not getattr(System, cast(str, self.entity_description.attribute))

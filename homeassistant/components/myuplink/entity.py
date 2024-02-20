@@ -1,4 +1,6 @@
 """Provide a common entity class for myUplink entities."""
+from myuplink import System
+
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -7,7 +9,7 @@ from .coordinator import MyUplinkDataCoordinator
 
 
 class MyUplinkEntity(CoordinatorEntity[MyUplinkDataCoordinator]):
-    """Representation of a sensor."""
+    """Representation of an entity."""
 
     _attr_has_entity_name = True
 
@@ -26,3 +28,25 @@ class MyUplinkEntity(CoordinatorEntity[MyUplinkDataCoordinator]):
         # Basic values
         self._attr_unique_id = f"{device_id}-{unique_id_suffix}"
         self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, device_id)})
+
+
+class MyUplinkSystemEntity(CoordinatorEntity[MyUplinkDataCoordinator]):
+    """Representation of an entity associated with a system."""
+
+    _attr_has_entity_name = True
+
+    def __init__(
+        self,
+        coordinator: MyUplinkDataCoordinator,
+        system: System,
+        unique_id_suffix: str,
+    ) -> None:
+        """Initialize the sensor."""
+        super().__init__(coordinator=coordinator)
+
+        # Internal properties
+        self.system = system.raw["id"]
+
+        # Basic values
+        self._attr_unique_id = f"{system.raw['id']}-{unique_id_suffix}"
+        self._attr_device_info = DeviceInfo(identifiers={(DOMAIN, system.raw["id"])})

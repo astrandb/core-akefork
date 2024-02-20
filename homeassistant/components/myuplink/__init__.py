@@ -81,12 +81,23 @@ def create_devices(
     """Update all devices."""
     device_registry = dr.async_get(hass)
 
-    for device_id, device in coordinator.data.devices.items():
+    for system in coordinator.data.systems:
         device_registry.async_get_or_create(
             config_entry_id=config_entry.entry_id,
-            identifiers={(DOMAIN, device_id)},
-            name=device.productName,
-            manufacturer=device.productName.split(" ")[0],
-            model=device.productName,
-            sw_version=device.firmwareCurrent,
+            identifiers={(DOMAIN, system.id)},
+            name=system.name,
+            manufacturer="Nibe",
+            # manufacturer=device.productName.split(" ")[0],
+            # model=device.productName,
+            # sw_version=device.firmwareCurrent,
         )
+        for device in system.devices:
+            device_registry.async_get_or_create(
+                config_entry_id=config_entry.entry_id,
+                identifiers={(DOMAIN, device.deviceId)},
+                name=device.raw["product"]["name"],
+                manufacturer=device.raw["product"]["name"].split(" ")[0],
+                model=device.raw["product"]["name"],
+                sw_version=device.raw["currentFwVersion"],
+                via_device=(DOMAIN, system.id),
+            )
