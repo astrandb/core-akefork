@@ -80,24 +80,26 @@ def create_devices(
 ) -> None:
     """Update all devices."""
     device_registry = dr.async_get(hass)
+    _device = None
 
     for system in coordinator.data.systems:
-        device_registry.async_get_or_create(
-            config_entry_id=config_entry.entry_id,
-            identifiers={(DOMAIN, system.id)},
-            name=system.name,
-            manufacturer="Nibe",
-            # manufacturer=device.productName.split(" ")[0],
-            # model=device.productName,
-            # sw_version=device.firmwareCurrent,
-        )
         for device in system.devices:
+            if _device is None:
+                _device = device
             device_registry.async_get_or_create(
                 config_entry_id=config_entry.entry_id,
                 identifiers={(DOMAIN, device.deviceId)},
                 name=device.raw["product"]["name"],
                 manufacturer=device.raw["product"]["name"].split(" ")[0],
                 model=device.raw["product"]["name"],
+                serial_number=device.raw["product"]["serialNumber"],
                 sw_version=device.raw["currentFwVersion"],
                 via_device=(DOMAIN, system.id),
             )
+        device_registry.async_get_or_create(
+            config_entry_id=config_entry.entry_id,
+            identifiers={(DOMAIN, system.id)},
+            name=f"{system.name} - System",
+            manufacturer="Nibe",
+            model=_device.raw["product"]["name"] if _device is not None else None,
+        )
