@@ -19,6 +19,7 @@ from homeassistant.helpers import (
 from .api import AsyncConfigEntryAuth
 from .const import DOMAIN, OAUTH2_SCOPES
 from .coordinator import MyUplinkDataCoordinator
+from .helpers import get_system_names
 
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
@@ -81,13 +82,14 @@ def create_devices(
 ) -> None:
     """Update all devices."""
     device_registry = dr.async_get(hass)
-
+    system = coordinator.data.systems[0]
     for device_id, device in coordinator.data.devices.items():
+        xxx = get_system_names(system, device)
         device_registry.async_get_or_create(
             config_entry_id=config_entry.entry_id,
             identifiers={(DOMAIN, device_id)},
-            name=device.productName,
-            manufacturer=device.productName.split(" ")[0],
-            model=device.productName,
+            name=xxx["name"],
+            manufacturer=xxx["manufacturer"],
+            model=xxx["model"],
             sw_version=device.firmwareCurrent,
         )
