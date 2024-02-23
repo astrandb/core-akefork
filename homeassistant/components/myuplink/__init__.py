@@ -4,7 +4,7 @@ from __future__ import annotations
 from http import HTTPStatus
 
 from aiohttp import ClientError, ClientResponseError
-from myuplink import MyUplinkAPI
+from myuplink import MyUplinkAPI, get_manufacturer, get_model, get_system_name
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
@@ -19,7 +19,6 @@ from homeassistant.helpers import (
 from .api import AsyncConfigEntryAuth
 from .const import DOMAIN, OAUTH2_SCOPES
 from .coordinator import MyUplinkDataCoordinator
-from .helpers import get_system_names
 
 PLATFORMS: list[Platform] = [
     Platform.BINARY_SENSOR,
@@ -82,14 +81,15 @@ def create_devices(
 ) -> None:
     """Update all devices."""
     device_registry = dr.async_get(hass)
-    system = coordinator.data.systems[0]
-    for device_id, device in coordinator.data.devices.items():
-        xxx = get_system_names(system, device)
-        device_registry.async_get_or_create(
-            config_entry_id=config_entry.entry_id,
-            identifiers={(DOMAIN, device_id)},
-            name=xxx["name"],
-            manufacturer=xxx["manufacturer"],
-            model=xxx["model"],
-            sw_version=device.firmwareCurrent,
-        )
+    for system in coordinator.data.systems:
+        devices_in_system = [x.id for x in system.devices]
+        for device_id, device in coordinator.data.devices.items():
+            if device_id in devices_in_system:
+                device_registry.async_get_or_create(
+                    config_entry_id=config_entry.entry_id,
+                    identifiers={(DOMAIN, device_id)},
+                    name=get_system_name(system),
+                    manufacturer=get_manufacturer(device),
+                    model=get_model(device),
+                    sw_version=device.firmwareCurrent,
+                )
