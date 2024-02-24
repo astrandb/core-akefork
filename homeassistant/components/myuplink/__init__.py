@@ -79,10 +79,24 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 def create_devices(
     hass: HomeAssistant, config_entry: ConfigEntry, coordinator: MyUplinkDataCoordinator
 ) -> None:
-    """Update all devices."""
+    """Create DeviceInfo for all devices.
+
+    If there are two or more devices in a system a system->device structure is created.
+    For "One system - One device"- type systems, just a single device is created.
+    """
+
     device_registry = dr.async_get(hass)
     for system in coordinator.data.systems:
         devices_in_system = [x.id for x in system.devices]
+        if len(system.devices) > 1:
+            device_registry.async_get_or_create(
+                config_entry_id=config_entry.entry_id,
+                identifiers={(DOMAIN, system.id)},
+                name=f"{get_system_name(system)} - System",
+                # manufacturer=get_manufacturer(system.devices[0]),
+                model=system.devices[0].product_name,
+            )
+
         for device_id, device in coordinator.data.devices.items():
             if device_id in devices_in_system:
                 device_registry.async_get_or_create(
@@ -91,5 +105,7 @@ def create_devices(
                     name=get_system_name(system),
                     manufacturer=get_manufacturer(device),
                     model=get_model(device),
-                    sw_version=device.firmwareCurrent,
+                    sw_version=device.curret_firmware_version,
+                    serial_number=device.product_serial_number,
+                    via_device=(DOMAIN, system.id) if len(system.devices) > 1 else None,
                 )
